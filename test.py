@@ -50,7 +50,7 @@ def test_mqtt():
 
 if __name__ == '__main__':
     if platform.system() == "Linux":
-        ser = serial.Serial("/dev/ttyS0")
+        ser = serial.Serial(port="/dev/ttyS0", baudrate=19200)
     else:
         ser = serial.Serial("COM1")
     debug_wait()
