@@ -57,14 +57,15 @@ if __name__ == '__main__':
     print("Write command...")
     ser.write(b'e')  # Command read temperature
     result = ""
-    c = ''
-    while c != "#":
-        result += c
-        c = ser.read()
+    while True:
+        c = ser.read().decode()
         print("Got: {}".format(c))
+        if c == "#":
+            break
+        result += c
     print(result)
 
-
+"""
     print("Write command...")
     ser.write(b't')  # Command read temperature
     print("Write index...")
@@ -77,3 +78,4 @@ if __name__ == '__main__':
         c = chr(ser.read())
         print("Got: {}".format(c))
     print(result)
+    """
