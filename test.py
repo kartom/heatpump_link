@@ -3,6 +3,7 @@ from time import sleep
 import configparser
 import paho.mqtt.client as mqtt
 import serial
+import platform
 
 
 def debug_wait():
@@ -48,9 +49,12 @@ def test_mqtt():
 
 
 if __name__ == '__main__':
-    ser = serial.Serial("/dev/ttyS0")
+    if platform.system() == "Linux":
+        ser = serial.Serial("/dev/ttyS0")
+    else:
+        ser = serial.Serial("COM1")
     ser.write(b't')  # Command read temperature
-    ser.write(chr(0)) # Index
+    ser.write(0)     # Index
     str = ""
     c = ''
     while c != "#":
