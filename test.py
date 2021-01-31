@@ -60,7 +60,7 @@ if __name__ == '__main__':
     c = ''
     while c != "#":
         result += c
-        c = chr(ser.read())
+        c = chr(int(ser.read()))
         print("Got: {}".format(c))
     print(result)
 
