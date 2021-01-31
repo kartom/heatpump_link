@@ -71,7 +71,10 @@ def read_status(ser: serial.Serial) -> int:
 
 def read_counter(ser: serial.Serial) -> int:
     ser.write(b'c')
-    return int(read_response(ser))
+    res = int(read_response(ser))
+    if res < 0:
+        res = res+65536
+    return res
 
 
 def read_temperature(ser: serial.Serial, idx: bytes) -> float:
