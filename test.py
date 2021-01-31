@@ -9,10 +9,10 @@ import platform
 def debug_wait():
     """Waiting so that communication not occurs an even minute to no collide with existing communication"""
     print(datetime.now())
-    second = (datetime.now().second+2) % 60
+    second = (datetime.now().second + 3) % 60
     if second < 5:
-        print("Waiting {} seconds".format(5-second))
-        sleep(5-second);
+        print("Waiting {} seconds".format(5 - second))
+        sleep(5 - second);
     print(datetime.now())
 
 
@@ -27,7 +27,7 @@ def on_connect(client, userdata, flags, rc):
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
-    print(msg.topic +" " + result(msg.payload))
+    print(msg.topic + " " + result(msg.payload))
 
 
 def test_mqtt():
@@ -40,12 +40,44 @@ def test_mqtt():
     host = config["MQTT"]["HOST"]
     port = int(config["MQTT"]["PORT"])
     interval = int(config["APP"]["INTERVAL"])
-    keepalive = int(interval + interval/2)
+    keepalive = int(interval + interval / 2)
     client.connect(host=host, port=port, keepalive=keepalive)
 
     start = datetime.now()
-    while (datetime.now()-start).total_seconds() < 60:
+    while (datetime.now() - start).total_seconds() < 60:
         client.loop(timeout=1.0)
+
+
+def read_response(ser: serial.Serial) -> str:
+    result = ""
+    while True:
+        c = ser.read().decode()
+        print("Got: {}".format(c))
+        if c == "#":
+            break
+        result += c
+    return result
+
+
+def read_error(ser: serial.Serial) -> int:
+    ser.write(b'e')  # Command read error
+    return int(read_response(ser))
+
+
+def read_status(ser: serial.Serial) -> int:
+    ser.write(b's')
+    return int(read_response(ser))
+
+
+def read_counter(ser: serial.Serial) -> int:
+    ser.write(b'c')
+    return int(read_response(ser))
+
+
+def read_temperature(ser: serial.Serial, idx: int) -> float:
+    ser.write(b't')
+    ser.write(b'0' + idx)
+    return float(read_response(ser))
 
 
 if __name__ == '__main__':
@@ -54,28 +86,11 @@ if __name__ == '__main__':
     else:
         ser = serial.Serial("COM1")
     debug_wait()
-    print("Write command...")
-    ser.write(b'e')  # Command read temperature
-    result = ""
-    while True:
-        c = ser.read().decode()
-        print("Got: {}".format(c))
-        if c == "#":
-            break
-        result += c
-    print(result)
-
-"""
-    print("Write command...")
-    ser.write(b't')  # Command read temperature
-    print("Write index...")
-    ser.write(0)     # Index
-    print("Read result...")
-    result = ""
-    c = ''
-    while c != "#":
-        result += c
-        c = chr(ser.read())
-        print("Got: {}".format(c))
-    print(result)
-    """
+    print("Read error:")
+    print(read_error(ser))
+    print("Read status:")
+    print(read_status(ser))
+    print("Read counter:")
+    print(read_counter(ser))
+    print("Read temperature 0:")
+    print(read_temperature(ser, 0))
