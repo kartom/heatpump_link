@@ -18,7 +18,7 @@ def debug_wait():
 
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
-    print("Connected with result code "+str(rc))
+    print("Connected with result code " + result(rc))
 
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
@@ -27,7 +27,7 @@ def on_connect(client, userdata, flags, rc):
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
-    print(msg.topic+" "+str(msg.payload))
+    print(msg.topic +" " + result(msg.payload))
 
 
 def test_mqtt():
@@ -55,10 +55,10 @@ if __name__ == '__main__':
         ser = serial.Serial("COM1")
     ser.write(b't')  # Command read temperature
     ser.write(0)     # Index
-    str = ""
+    result = ""
     c = ''
     while c != "#":
-        str += c
+        result += c
         c = chr(ser.read())
         print(c)
-    print(str)
+    print(result)
