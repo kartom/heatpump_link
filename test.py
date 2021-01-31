@@ -53,12 +53,16 @@ if __name__ == '__main__':
         ser = serial.Serial("/dev/ttyS0")
     else:
         ser = serial.Serial("COM1")
+    debug_wait()
+    print("Write command...")
     ser.write(b't')  # Command read temperature
+    print("Write index...")
     ser.write(0)     # Index
+    print("Read result...")
     result = ""
     c = ''
     while c != "#":
         result += c
         c = chr(ser.read())
-        print(c)
+        print("Got: {}".format(c))
     print(result)
