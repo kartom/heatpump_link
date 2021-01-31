@@ -56,3 +56,4 @@ if __name__ == '__main__':
     while c != "#":
         str += c
         c = chr(ser.read())
+    print(str)
