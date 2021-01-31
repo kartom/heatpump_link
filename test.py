@@ -74,9 +74,10 @@ def read_counter(ser: serial.Serial) -> int:
     return int(read_response(ser))
 
 
-def read_temperature(ser: serial.Serial, idx: int) -> float:
+def read_temperature(ser: serial.Serial, idx: bytes) -> float:
     ser.write(b't')
-    ser.write(b'0' + idx)
+    print(bytes([48+idx]))
+    ser.write(bytes([48+idx]))
     return float(read_response(ser))
 
 
@@ -86,11 +87,11 @@ if __name__ == '__main__':
     else:
         ser = serial.Serial("COM1")
     debug_wait()
+    print("Read temperature 0:")
+    print(read_temperature(ser, 0))
     print("Read error:")
     print(read_error(ser))
     print("Read status:")
     print(read_status(ser))
     print("Read counter:")
     print(read_counter(ser))
-    print("Read temperature 0:")
-    print(read_temperature(ser, 0))
