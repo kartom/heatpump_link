@@ -29,24 +29,24 @@ parameters = {
 
 values = {
     "house/actual_temp": (b't', 0),
+    "house/sp_temp": (b'p', 1),
+    "house/outdoor_temp": (b't', 6),
     "supply/temp": (b't', 1),
+    "supply/min_temp": (b'p', 14),
+    "supply/max_temp": (b'p', 16),
+    "supply/valve": (b'o', 0),
+    "supply/sp_temp": (b'o', 1),
     "tap_water/temp": (b't', 2),
     "accumulator/middle_temp": (b't', 3),
     "accumulator/bottom_temp": (b't', 4),
     "accumulator/top_temp": (b't', 5),
-    "house/outdoor_temp": (b't', 6),
-    "heat_pump/status": (b's', None),
-    "heat_pump/brine_in_temp": (b't', 7),
-    "heat_pump/brine_out_temp": (b't', 8),
-    "heat_pump/return_temp": (b't', 9),
-    "heat_pump/supply_temp": (b't', 10),
-    "heat_pump/counter": (b'c', None),
-    "heat_pump/error": (b'e', None),
-    "house/sp_temp": (b'p', 1),
-    "supply/min_temp": (b'p', 13),
-    "supply/max_temp": (b'p', 15),
-    "supply/valve": (b'p', 0),
-    "supply/sp_temp": (b'p', 1),
+    "heatpump/status": (b's', None),
+    "heatpump/brine_in_temp": (b't', 7),
+    "heatpump/brine_out_temp": (b't', 8),
+    "heatpump/return_temp": (b't', 9),
+    "heatpump/supply_temp": (b't', 10),
+    "heatpump/counter": (b'c', None),
+    "heatpump/error": (b'e', None),
 }
 
 outputs = {
@@ -85,7 +85,7 @@ def connect_mqtt(host: str, port: int) -> mqtt.Client:
     return client
 
 
-def read_value(ser: serial.Serial, value: (bytes, int)) -> int:
+def read_value(ser: serial.Serial, value: (bytes, int)):
     cmd, index = value
     ser.write(cmd)  # Command read error
     if index is not None:
@@ -96,9 +96,13 @@ def read_value(ser: serial.Serial, value: (bytes, int)) -> int:
         if c == "#":
             break
         result += c
-    if cmd == b'c' and result[0] == '-':
-        # Fix negative counter value
-        result = str(int(result)+65536)
+    if cmd in (b'c', b'e', b's'):
+        result = int(result)
+        if result < 0:
+            # Fix negative counter value
+            result = int(result)+65536
+    else:
+        result = float(result)
     return result
 
 
@@ -123,10 +127,11 @@ if __name__ == '__main__':
                         qos=1,
                         retain=True)
 
-    while (datetime.now().second+5) % 10:
-        sleep(0.01)
-    next_time = datetime.now()+timedelta(seconds=10)
-    n=20;
+    next_time = datetime.now()
+    while (next_time.second+5) % 10:
+        next_time = datetime.now()
+
+    n = 20
     while True:
         print(next_time)
         while datetime.now() < next_time:
