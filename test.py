@@ -126,6 +126,8 @@ if __name__ == '__main__':
                         payload=json.dumps({"settings": res}),
                         qos=1,
                         retain=True)
+    if not debug:
+        print("Error: {}".format(read_value(ser, (b'e', None))))
 
     next_time = datetime.now()
     while (next_time.second+5) % 10:
