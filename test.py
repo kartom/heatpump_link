@@ -24,7 +24,7 @@ parameters = {
     "house_tc_td": (b'p', 12),  # House temperature controller derivative time [s]
     "house_tc_out_min": (b'p', 14),  # House temperature controller, output low limit
     "house_tc_out_max": (b'p', 16),  # House temperature controller, output high limit
-    "changeover_time": (b'p', 17)  # Change over time when switching to tap water production
+    "changeover_time": (b'p', 16)  # Change over time when switching to tap water production
 }
 
 values = {
