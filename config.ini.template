@@ -4,3 +4,4 @@ INTERVAL = 60
 [MQTT]
 HOST = #The hostname or IP address of the remote broker
 PORT = 1883
+PREFIX = heatpump/

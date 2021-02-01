@@ -1,30 +1,57 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import sleep
 import configparser
 import paho.mqtt.client as mqtt
 import serial
 import platform
+import json
 
-parameters = {"filter": 0,  # Filter time in seconds for temperature measurements
-              "sp_temp": 1,  # Set point for the house temperature
-              "acc_min_temp": 2,  # Minimum temperature i the middle of the acc tank before the heat pump is started
-              "stop_offset": 3,  # Offset for all temperature comparisons that can stop the heat pump
-              "water_min_temp": 4,  # Temperature of the tap water that starts tap water production
-              "max_return_temp": 5,  # Temperature to the heat pump that aborts initial tap water production
-              "water_hot_temp": 6,  # Temperature of tap water that does not require final heating of tap water
-              "supply_tc_k": 7,  # Supply temperature controller gain
-              "house_tc_k": 8,  # House temperature controller gain
-              "supply_tc_ti": 9,  # Supply temperature controller integration time [s]
-              "house_tc_ti": 10,  # House temperature controller integration time [s]
-              "supply_tc_td": 11,  # Supply temperature controller derivative time [s]
-              "house_tc_td": 12,  # House temperature controller derivative time [s]
-              "supply_tc_min": 13,  # Supply temperature controller, output low limit
-              "house_tc_min": 14,  # House temperature controller, output low limit
-              "supply_tc_max": 15,  # Supply temperature controller, output high limit
-              "house_tc_max": 16,  # House temperature controller, output high limit
-              "changeover_time": 17  # Change over time when switching to tap water production
-              }
+parameters = {
+    "filter": (b'p', 0),  # Filter time in seconds for temperature measurements
+    "sp_temp": (b'p', 1),  # Setpoint for the house temperature
+    "acc_min_temp": (b'p', 2),  # Minimum temperature i the middle of the acc tank before the heat pump is started
+    "stop_offset": (b'p', 3),  # Offset for all temperature comparisons that can stop the heat pump
+    "water_min_temp": (b'p', 4),  # Temperature of the tap water that starts tap water production
+    "max_return_temp": (b'p', 5),  # Temperature to the heat pump that aborts initial tap water production
+    "water_hot_temp": (b'p', 6),  # Temperature of tap water that does not require final heating of tap water
+    "supply_tc_k": (b'p', 7),  # Supply temperature controller gain
+    "supply_tc_ti": (b'p', 9),  # Supply temperature controller integration time [s]
+    "supply_tc_td": (b'p', 11),  # Supply temperature controller derivative time [s]
+    "supply_tc_out_min": (b'p', 13),  # Supply temperature controller, output low limit
+    "supply_tc_out_max": (b'p', 15),  # Supply temperature controller, output high limit
+    "house_tc_k": (b'p', 8),  # House temperature controller gain
+    "house_tc_ti": (b'p', 10),  # House temperature controller integration time [s]
+    "house_tc_td": (b'p', 12),  # House temperature controller derivative time [s]
+    "house_tc_out_min": (b'p', 14),  # House temperature controller, output low limit
+    "house_tc_out_max": (b'p', 16),  # House temperature controller, output high limit
+    "changeover_time": (b'p', 17)  # Change over time when switching to tap water production
+}
 
+values = {
+    "house/actual_temp": (b't', 0),
+    "supply/temp": (b't', 1),
+    "tap_water/temp": (b't', 2),
+    "accumulator/middle_temp": (b't', 3),
+    "accumulator/bottom_temp": (b't', 4),
+    "accumulator/top_temp": (b't', 5),
+    "house/outdoor_temp": (b't', 6),
+    "heat_pump/status": (b's', None),
+    "heat_pump/brine_in_temp": (b't', 7),
+    "heat_pump/brine_out_temp": (b't', 8),
+    "heat_pump/return_temp": (b't', 9),
+    "heat_pump/supply_temp": (b't', 10),
+    "heat_pump/counter": (b'c', None),
+    "heat_pump/error": (b'e', None),
+    "house/sp_temp": (b'p', 1),
+    "supply/min_temp": (b'p', 13),
+    "supply/max_temp": (b'p', 15),
+    "supply/valve": (b'p', 0),
+    "supply/sp_temp": (b'p', 1),
+}
+
+outputs = {
+    
+}
 
 def debug_wait():
     """Waiting so that communication not occurs an even minute to no collide with existing communication"""
@@ -58,62 +85,60 @@ def connect_mqtt(host: str, port: int) -> mqtt.Client:
     return client
 
 
-def read_response(ser: serial.Serial) -> str:
+def read_value(ser: serial.Serial, value: (bytes, int)) -> int:
+    cmd, index = value
+    ser.write(cmd)  # Command read error
+    if index is not None:
+        ser.write(bytes([48 + index]))
     result = ""
     while True:
         c = ser.read().decode()
         if c == "#":
             break
         result += c
+    if result[0] == '-':
+        # Fix negative counter value
+        result = str(int(result)+65536)
     return result
-
-
-def read_error(ser: serial.Serial) -> int:
-    ser.write(b'e')  # Command read error
-    return int(read_response(ser))
-
-
-def read_status(ser: serial.Serial) -> int:
-    ser.write(b's')
-    return int(read_response(ser))
-
-
-def read_counter(ser: serial.Serial) -> int:
-    ser.write(b'c')
-    res = int(read_response(ser))
-    if res < 0:
-        res = res + 65536
-    return res
-
-
-def read_temperature(ser: serial.Serial, idx: bytes) -> float:
-    ser.write(b't')
-    ser.write(bytes([48 + idx]))
-    return float(read_response(ser))
-
-
-def read_parameter(ser: serial.Serial, idx: bytes) -> float:
-    ser.write(b'p')
-    ser.write(bytes([48 + idx]))
-    return float(read_response(ser))
 
 
 if __name__ == '__main__':
     config = configparser.ConfigParser()
     config.read("config.ini")
+    debug = platform.system() != "Linux"
 
     mqtt_client = connect_mqtt(host=config["MQTT"]["HOST"], port=int(config["MQTT"]["PORT"]))
 
     mqtt_client.loop_start()
-    debug_wait()
 
-    if platform.system() == "Linux":
+    if not debug:
         ser = serial.Serial(port="/dev/ttyS0", baudrate=19200)
-        for par, idx in parameters.items():
-            mqtt_client.publish("heatpump/parameter/{}".format(par), read_parameter(ser, idx), qos=1, retain=True)
-    else:
-        for par, idx in parameters.items():
-            mqtt_client.publish("heatpump/parameter/{}".format(par), idx, qos=1, retain=True)
+        debug_wait()
 
-    sleep(20)
+    res = {}
+    for par, value in parameters.items():
+        res[par] = read_value(ser, value) if not debug else value[1]
+    mqtt_client.publish(topic="{}$implementation/config".format(config["MQTT"]["PREFIX"]),
+                        payload=json.dumps({"settings": res}),
+                        qos=1,
+                        retain=True)
+
+    while (datetime.now().second+5) % 10:
+        sleep(0.01)
+    next_time = datetime.now()+timedelta(seconds=10)
+    n=20;
+    while True:
+        print(next_time)
+        while datetime.now() < next_time:
+            sleep(0.1)
+        next_time = next_time+timedelta(seconds=10)
+        for topic, value in values.items():
+            mqtt_client.publish(topic="{}{}".format(config["MQTT"]["PREFIX"], topic),
+                                payload=read_value(ser, value) if not debug else value[1],
+                                qos=1,
+                                retain=True)
+        n -= 1
+        if n <= 0:
+            break
+
     mqtt_client.loop_stop()
