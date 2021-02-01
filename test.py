@@ -52,7 +52,6 @@ def read_response(ser: serial.Serial) -> str:
     result = ""
     while True:
         c = ser.read().decode()
-        print("Got: {}".format(c))
         if c == "#":
             break
         result += c
