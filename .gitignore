@@ -131,3 +131,6 @@ dmypy.json
 #Configuration files
 *.yaml
 *.ini
+
+#Ide
+.idea/*

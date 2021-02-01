@@ -6,6 +6,8 @@ import serial
 import platform
 
 
+
+
 def debug_wait():
     """Waiting so that communication not occurs an even minute to no collide with existing communication"""
     print(datetime.now())
@@ -30,23 +32,11 @@ def on_message(client, userdata, msg):
     print(msg.topic + " " + result(msg.payload))
 
 
-def test_mqtt():
-    config = configparser.ConfigParser()
-    config.read("config.ini")
-
+def connect_mqtt(host: str, port: int) -> mqtt.Client:
     client = mqtt.Client("heatpump-link")
     client.on_connect = on_connect
     client.on_message = on_message
-    host = config["MQTT"]["HOST"]
-    port = int(config["MQTT"]["PORT"])
-    interval = int(config["APP"]["INTERVAL"])
-    keepalive = int(interval + interval / 2)
-    client.connect(host=host, port=port, keepalive=keepalive)
-
-    start = datetime.now()
-    while (datetime.now() - start).total_seconds() < 60:
-        client.loop(timeout=1.0)
-
+    client.connect(host=host, port=port)
 
 def read_response(ser: serial.Serial) -> str:
     result = ""
@@ -78,12 +68,22 @@ def read_counter(ser: serial.Serial) -> int:
 
 def read_temperature(ser: serial.Serial, idx: bytes) -> float:
     ser.write(b't')
-    print(bytes([48+idx]))
+    ser.write(bytes([48+idx]))
+    return float(read_response(ser))
+
+
+def read_parameter(ser: serial.Serial, idx: bytes) -> float:
+    ser.write(b'p')
     ser.write(bytes([48+idx]))
     return float(read_response(ser))
 
 
 if __name__ == '__main__':
+    config = configparser.ConfigParser()
+    config.read("config.ini")
+
+    mqtt = connect_mqtt(host=config["MQTT"]["HOST"], port=int(config["MQTT"]["PORT"]))
+
     if platform.system() == "Linux":
         ser = serial.Serial(port="/dev/ttyS0", baudrate=19200)
     else:
@@ -93,6 +93,11 @@ if __name__ == '__main__':
     print(read_temperature(ser, 0))
     print("Read temperature 1:")
     print(read_temperature(ser, 1))
+    print("Read error:")
+    print("Read parameter 0:")
+    print(read_parameter(ser, 0))
+    print("Read parameter 1:")
+    print(read_parameter(ser, 1))
     print("Read error:")
     print(read_error(ser))
     print("Read status:")
