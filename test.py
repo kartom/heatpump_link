@@ -96,7 +96,7 @@ def read_value(ser: serial.Serial, value: (bytes, int)) -> int:
         if c == "#":
             break
         result += c
-    if result[0] == '-':
+    if cmd == b'c' and result[0] == '-':
         # Fix negative counter value
         result = str(int(result)+65536)
     return result
