@@ -91,6 +91,8 @@ if __name__ == '__main__':
     debug_wait()
     print("Read temperature 0:")
     print(read_temperature(ser, 0))
+    print("Read temperature 1:")
+    print(read_temperature(ser, 1))
     print("Read error:")
     print(read_error(ser))
     print("Read status:")
